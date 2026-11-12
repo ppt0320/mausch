@@ -1,5 +1,5 @@
 
-const CACHE='mausch-v2';
+const CACHE='mausch-v3';
 
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(c=>c.addAll([
