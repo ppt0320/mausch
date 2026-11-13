@@ -1,5 +1,4 @@
-
-const CACHE='mausch-v3';
+const CACHE='mausch-v4';
 
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(c=>c.addAll([
@@ -19,7 +18,14 @@ self.addEventListener('activate',e=>e.waitUntil(
 ));
 
 self.addEventListener('fetch',e=>{
-  e.respondWith(
-    caches.match(e.request).then(r=>r||fetch(e.request))
-  );
+  if(e.request.method!=='GET')return;
+  const isAppShell=e.request.mode==='navigate'||new URL(e.request.url).pathname.endsWith('/index.html');
+  if(isAppShell){
+    e.respondWith(fetch(e.request).then(response=>{
+      if(response.ok)caches.open(CACHE).then(c=>c.put('./index.html',response.clone()));
+      return response;
+    }).catch(()=>caches.match(e.request).then(cached=>cached||caches.match('./index.html'))));
+    return;
+  }
+  e.respondWith(caches.match(e.request).then(response=>response||fetch(e.request)));
 });
