@@ -1,50 +1,25 @@
-# Inicio de sesión MAU$ch con ID y contraseña
+# Acceso de MAU$ch con ID y contraseña
 
-## Objetivo
+## Flujo elegido
 
-La persona inicia sesión con un ID de MAU$ch y una contraseña. El correo no aparece en la pantalla de acceso ni se usa como nombre de usuario visible.
+- El acceso diario usa un ID de 3 a 24 caracteres y contraseña de al menos 12 caracteres.
+- Supabase Auth conserva la identidad y su UUID. Las cajas y movimientos siguen vinculados con el mismo `auth.uid()` y las políticas RLS actuales.
+- La capa Edge traduce el ID a un correo interno `@accounts.mausch.invalid`; este correo nunca se muestra ni se introduce en la app.
+- Las cuentas nuevas reciben un código de recuperación de 192 bits, visible una vez. Solo se almacena su hash. Cinco códigos incorrectos bloquean la recuperación por 15 minutos; también hay límites por IP para acceso, registro y recuperación.
+- El correo anterior solo aparece como opción secundaria y temporal para entrar a la cuenta vieja y vincularla. Al vincularla, se cambia su email interno y se asigna una contraseña sin cambiar el UUID ni las filas existentes.
 
-## Estado actual
+## Archivos preparados
 
-- La página inicia sesión con un enlace mágico enviado por correo.
-- Supabase Auth crea la identidad; las tablas `boxes` y `moves` guardan ese UUID en `user_id`.
-- Ambas tablas tienen RLS y claves foráneas hacia `auth.users`.
-- Las políticas y la sincronización dependen de `auth.uid()`. Ese UUID debe conservarse al cambiar el acceso.
-- No hay una tabla de perfiles ni funciones Edge existentes para resolver IDs de usuario.
+- `supabase/sql/mausch_id_auth.sql`: tabla de IDs, tabla de límites y funciones SQL con ejecución reservada a `service_role`.
+- `supabase/functions/mausch-auth/`: alta, acceso, estado, vinculación y recuperación. La clave `service_role` queda en el entorno de Edge Functions.
+- `index.html`: formularios de ID y contraseña, registro, vinculación de la cuenta previa y recuperación por código. La autorización de sincronización local se guarda por UUID de Auth, no como una marca compartida entre cuentas.
 
-La autenticación por contraseña nativa de Supabase se basa en correo o teléfono; no recibe un nombre de usuario arbitrario. Para ofrecer un ID sin mostrar correos, MAU$ch necesita una capa pequeña de servidor que traduzca el ID a la identidad interna y devuelva una sesión de Auth. La clave privilegiada de Supabase debe quedarse dentro de esa función y nunca entrar al HTML ni a la app.
+## Conservación de datos
 
-## Diseño propuesto
+La migración es aditiva. No borra usuarios ni altera `boxes.user_id`, `moves.user_id`, las cajas, los movimientos o sus comprobantes. Al vincular una cuenta previa, Auth mantiene el mismo UUID, por lo que siguen aplicando las relaciones y políticas existentes.
 
-1. Crear un registro privado de inicio de sesión por cuenta: UUID de Auth, ID normalizado y el identificador interno que Auth necesita. El ID normalizado será único. La tabla tendrá RLS y permisos revocados para `anon` y `authenticated`; solo las funciones del servidor podrán consultarla.
-2. Añadir una función para vincular un ID a la cuenta existente. Requiere la sesión actual de esa cuenta, fija su ID y contraseña, y conserva el mismo UUID. No copia, borra ni reasigna cajas o movimientos.
-3. Añadir una función de acceso por ID. Busca la identidad interna solo en el servidor, verifica la contraseña con Supabase Auth y devuelve los tokens de sesión a la app. Los errores de ID inexistente y contraseña incorrecta deben verse iguales.
-4. Añadir el alta de nuevas cuentas por ID y contraseña. La función crea la identidad de Auth y el registro privado de forma coordinada, con validación y límite de solicitudes. Las contraseñas nunca se guardan en tablas ni registros de MAU$ch.
-5. La pantalla muestra el ID de MAU$ch en lugar del correo. La interfaz nunca usa metadatos modificables del usuario para decidir permisos. Las cajas y movimientos siguen autorizándose por `auth.uid()`.
+Las cajas y movimientos locales que no existan en la cuenta remota siguen requiriendo la revisión y autorización inicial que ya tiene MAU$ch. La marca de autorización es específica a cada UUID para evitar enviar datos locales a otra cuenta que use el mismo dispositivo.
 
-## Vinculación de la cuenta existente
+## Publicación
 
-La cuenta actual debe vincularse mientras todavía hay una sesión válida. La función toma el UUID de esa sesión y añade el ID a esa misma cuenta. En el siguiente acceso desde Mac o iPhone, el ID debe volver a producir la misma sesión y el mismo UUID. Así se conservan las relaciones actuales con todas las cajas y movimientos.
-
-No se debe crear otra cuenta para reemplazar la actual ni editar `user_id` en las tablas de datos.
-
-## Decisión pendiente para la próxima sesión
-
-Definir cómo recuperar una cuenta si se olvida la contraseña:
-
-- correo opcional, oculto durante el acceso y usado solo para recuperación;
-- código de recuperación generado al crear la cuenta y guardado por la persona;
-- sin recuperación automática, con una explicación clara antes de crear el ID.
-
-No se debe prometer recuperación por ID solamente: conocer un ID no demuestra que la cuenta pertenece a quien solicita restablecer la contraseña.
-
-## Orden seguro de trabajo
-
-1. Confirmar el método de recuperación.
-2. Preparar la tabla privada y las funciones en un entorno de pruebas.
-3. Vincular una sesión de prueba conservando el UUID y comprobar que sus cajas y movimientos siguen apareciendo.
-4. Crear otra cuenta de prueba y comprobar que solo ve sus propios datos.
-5. Probar contraseña incorrecta, ID duplicado, límites de intentos, cierre de sesión y recuperación.
-6. Preparar la publicación y la migración gradual. Mantener el acceso actual hasta confirmar que la cuenta existente quedó vinculada.
-
-Este documento prepara la implementación. No modifica Auth, tablas, políticas, funciones ni datos de producción.
+Este código está preparado en la rama `native-app-foundation`. La migración de Supabase y el despliegue de la función requieren autorización explícita para modificar producción. La pantalla web y el acceso actual por correo deben mantenerse hasta probar el inicio de sesión con ID y la vinculación de la cuenta existente.
