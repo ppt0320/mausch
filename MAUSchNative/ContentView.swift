@@ -105,6 +105,65 @@ private struct WebAppView: UIViewRepresentable {
             _loadFailed = loadFailed
         }
 
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptAlertPanelWithMessage message: String,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping () -> Void
+        ) {
+            guard let presenter = topViewController(for: webView) else {
+                completionHandler()
+                return
+            }
+            let alert = UIAlertController(title: "MAU$ch", message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "Aceptar", style: .default) { _ in completionHandler() })
+            presenter.present(alert, animated: true)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptConfirmPanelWithMessage message: String,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping (Bool) -> Void
+        ) {
+            guard let presenter = topViewController(for: webView) else {
+                completionHandler(false)
+                return
+            }
+            let alert = UIAlertController(title: "MAU$ch", message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel) { _ in completionHandler(false) })
+            alert.addAction(UIAlertAction(title: "Continuar", style: .default) { _ in completionHandler(true) })
+            presenter.present(alert, animated: true)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptTextInputPanelWithPrompt prompt: String,
+            defaultText: String?,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping (String?) -> Void
+        ) {
+            guard let presenter = topViewController(for: webView) else {
+                completionHandler(nil)
+                return
+            }
+            let alert = UIAlertController(title: "MAU$ch", message: prompt, preferredStyle: .alert)
+            alert.addTextField { $0.text = defaultText }
+            alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel) { _ in completionHandler(nil) })
+            alert.addAction(UIAlertAction(title: "Aceptar", style: .default) { _ in
+                completionHandler(alert.textFields?.first?.text)
+            })
+            presenter.present(alert, animated: true)
+        }
+
+        private func topViewController(for webView: WKWebView) -> UIViewController? {
+            guard var presenter = webView.window?.rootViewController else { return nil }
+            while let presented = presenter.presentedViewController, !presented.isBeingDismissed {
+                presenter = presented
+            }
+            return presenter
+        }
+
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             isLoading = true
             loadFailed = false
@@ -180,6 +239,71 @@ private struct WebAppView: NSViewRepresentable {
         init(isLoading: Binding<Bool>, loadFailed: Binding<Bool>) {
             _isLoading = isLoading
             _loadFailed = loadFailed
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptAlertPanelWithMessage message: String,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping () -> Void
+        ) {
+            guard let window = webView.window else {
+                completionHandler()
+                return
+            }
+            let alert = NSAlert()
+            alert.messageText = "MAU$ch"
+            alert.informativeText = message
+            alert.addButton(withTitle: "Aceptar")
+            alert.beginSheetModal(for: window) { _ in completionHandler() }
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptConfirmPanelWithMessage message: String,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping (Bool) -> Void
+        ) {
+            guard let window = webView.window else {
+                completionHandler(false)
+                return
+            }
+            let alert = NSAlert()
+            alert.messageText = "MAU$ch"
+            alert.informativeText = message
+            alert.addButton(withTitle: "Cancelar")
+            alert.addButton(withTitle: "Continuar")
+            alert.buttons.first?.keyEquivalent = "\u{1b}"
+            alert.buttons.last?.keyEquivalent = "\r"
+            alert.beginSheetModal(for: window) { response in
+                completionHandler(response == .alertSecondButtonReturn)
+            }
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptTextInputPanelWithPrompt prompt: String,
+            defaultText: String?,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping (String?) -> Void
+        ) {
+            guard let window = webView.window else {
+                completionHandler(nil)
+                return
+            }
+            let alert = NSAlert()
+            alert.messageText = "MAU$ch"
+            alert.informativeText = prompt
+            let input = NSTextField(string: defaultText ?? "")
+            input.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
+            alert.accessoryView = input
+            alert.addButton(withTitle: "Cancelar")
+            alert.addButton(withTitle: "Aceptar")
+            alert.buttons.first?.keyEquivalent = "\u{1b}"
+            alert.buttons.last?.keyEquivalent = "\r"
+            alert.beginSheetModal(for: window) { response in
+                completionHandler(response == .alertSecondButtonReturn ? input.stringValue : nil)
+            }
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
