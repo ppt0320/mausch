@@ -809,6 +809,7 @@ private struct WebAppView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
+        configuration.userContentController.add(context.coordinator, name: "mauschBackup")
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.navigationDelegate = context.coordinator
         view.uiDelegate = context.coordinator
@@ -823,7 +824,7 @@ private struct WebAppView: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         @Binding private var isLoading: Bool
         @Binding private var loadFailed: Bool
         private let onPageLoaded: (WKWebView) -> Void
@@ -842,7 +843,58 @@ private struct WebAppView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isLoading = false
             loadFailed = false
+            webView.evaluateJavaScript("""
+            window.backup = async function() {
+              try {
+                for (let attempt = 0; attempt < 40; attempt++) {
+                  if (typeof all === 'function' && typeof db !== 'undefined' && db) break;
+                  await new Promise(resolve => setTimeout(resolve, 250));
+                }
+                if (typeof all !== 'function' || !db) throw new Error('El almacenamiento todavía se está cargando.');
+                const file = {app: 'MAU$ch', version: 2, exportedAt: new Date().toISOString(), boxes: await all('boxes'), items: await all('moves')};
+                window.webkit.messageHandlers.mauschBackup.postMessage(JSON.stringify(file));
+              } catch (error) {
+                alert(error.message || 'No se pudo preparar el respaldo.');
+              }
+            };
+            """)
             onPageLoaded(webView)
+        }
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard message.name == "mauschBackup",
+                  let json = message.body as? String,
+                  let data = json.data(using: .utf8),
+                  let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  payload["app"] as? String == "MAU$ch",
+                  payload["version"] as? Int == 2 else {
+                showBackupError("No se pudo preparar el archivo de respaldo.", in: message.webView)
+                return
+            }
+            let date = DateFormatter()
+            date.locale = Locale(identifier: "en_US_POSIX")
+            date.dateFormat = "yyyyMMdd-HHmmss"
+            let fileURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("MAU$ch-Respaldo-\(date.string(from: Date())).json")
+            do {
+                try data.write(to: fileURL, options: .atomic)
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, let webView = message.webView,
+                          let presenter = self.topViewController(for: webView) else { return }
+                    let share = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
+                    share.completionWithItemsHandler = { _, _, _, _ in
+                        try? FileManager.default.removeItem(at: fileURL)
+                    }
+                    if let popover = share.popoverPresentationController {
+                        popover.sourceView = presenter.view
+                        popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 0, height: 0)
+                        popover.permittedArrowDirections = []
+                    }
+                    presenter.present(share, animated: true)
+                }
+            } catch {
+                showBackupError("No se pudo crear el archivo de respaldo.", in: message.webView)
+            }
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -908,6 +960,15 @@ private struct WebAppView: UIViewRepresentable {
             guard (error as NSError).code != NSURLErrorCancelled else { return }
             isLoading = false
             loadFailed = true
+        }
+
+        private func showBackupError(_ text: String, in webView: WKWebView?) {
+            DispatchQueue.main.async { [weak self, weak webView] in
+                guard let self, let webView, let presenter = self.topViewController(for: webView) else { return }
+                let alert = UIAlertController(title: "MAU$ch", message: text, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "Aceptar", style: .default))
+                presenter.present(alert, animated: true)
+            }
         }
     }
 }
