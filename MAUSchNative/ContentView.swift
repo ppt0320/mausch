@@ -143,7 +143,7 @@ private struct WebAppView: UIViewRepresentable {
             date.locale = Locale(identifier: "en_US_POSIX")
             date.dateFormat = "yyyyMMdd-HHmmss"
             let fileURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("MAU$ch-Respaldo-\(date.string(from: Date())).json")
+                .appendingPathComponent("MAU$-Respaldo-\(date.string(from: Date())).json")
             do {
                 try data.write(to: fileURL, options: .atomic)
                 DispatchQueue.main.async { [weak self] in
@@ -311,7 +311,7 @@ private struct WebAppView: NSViewRepresentable {
                 return
             }
             let alert = NSAlert()
-            alert.messageText = "MAU$ch"
+            alert.messageText = "MAU$"
             alert.informativeText = message
             alert.addButton(withTitle: "Aceptar")
             alert.beginSheetModal(for: window) { _ in completionHandler() }
@@ -323,7 +323,7 @@ private struct WebAppView: NSViewRepresentable {
                 return
             }
             let alert = NSAlert()
-            alert.messageText = "MAU$ch"
+            alert.messageText = "MAU$"
             alert.informativeText = message
             alert.addButton(withTitle: "Cancelar")
             alert.addButton(withTitle: "Continuar")
@@ -340,7 +340,7 @@ private struct WebAppView: NSViewRepresentable {
                 return
             }
             let alert = NSAlert()
-            alert.messageText = "MAU$ch"
+            alert.messageText = "MAU$"
             alert.informativeText = prompt
             let input = NSTextField(string: defaultText ?? "")
             input.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
