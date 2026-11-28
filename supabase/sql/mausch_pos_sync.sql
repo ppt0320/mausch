@@ -1,5 +1,5 @@
--- Reversible, separate snapshot storage for MAU$ Sales and Inventory.
--- Review and apply only to a Supabase development branch before any production rollout.
+-- Separate Sales and Inventory snapshot storage for MAU$.
+-- This additive migration does not modify the existing Caja chica tables or data.
 create table if not exists public.mausch_pos_sync (
   user_id uuid primary key references auth.users(id) on delete cascade,
   payload jsonb not null check (jsonb_typeof(payload) = 'object'),
@@ -7,7 +7,7 @@ create table if not exists public.mausch_pos_sync (
 );
 
 alter table public.mausch_pos_sync enable row level security;
-revoke all on public.mausch_pos_sync from anon;
+revoke all on public.mausch_pos_sync from public, anon, authenticated;
 grant select, insert, update on public.mausch_pos_sync to authenticated;
 
 drop policy if exists "Users can read their own MAU$ sales and inventory" on public.mausch_pos_sync;
@@ -26,7 +26,6 @@ create policy "Users can update their own MAU$ sales and inventory"
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
--- Realtime is optional; initial data sync also runs at login, reconnect and app foreground.
 do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
