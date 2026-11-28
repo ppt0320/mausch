@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const publicKey = "sb_publishable_0EUlVHlrWJCZ9t945DUcrw_KXzGcCdT";
+const publicKey = "sb_publishable_J2ndyfne34VbKLSjdfVyNw_pQKN-2Tc";
 const admin = createClient(supabaseUrl, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -10,7 +10,7 @@ const publicAuth = createClient(supabaseUrl, publicKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const allowedOrigins = new Set(["https://ppt0320.github.io"]);
+const allowedOrigins = new Set(["https://ppt0320.github.io", "http://127.0.0.1:8765", "http://localhost:8765"]);
 const corsHeaders = (origin: string | null) => ({
   "Access-Control-Allow-Origin": origin && allowedOrigins.has(origin) ? origin : "https://ppt0320.github.io",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
