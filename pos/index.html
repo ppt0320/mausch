@@ -95,8 +95,8 @@ nav button.active{background:#302820!important;color:#e3c29a!important}
 .pill.credit{background:#3a3026!important;color:#e3c29a!important}
 .green,.pink,.gold{color:#e3c29a!important}
 </style>
-</head><body>
-<header><div><div class="brand">MAU$ <span>POS</span></div><div class="sub">VENTAS · CLIENTES · INVENTARIO · VERSIÓN 1.15</div></div></header>
+<style>body.embedded{padding-bottom:16px!important}body.embedded nav{display:none!important}</style></head><body>
+<header><div><div class="brand">MAU$</div><div class="sub">VENTAS · CLIENTES · INVENTARIO</div></div></header>
 <main>
 <section id="home" class="page active"><h2>Resumen general</h2><div class="grid">
 <div class="card stat"><small>Ventas de hoy</small><strong id="hSales">$0.00</strong></div><div class="card stat"><small>Por cobrar</small><strong id="hDebt" class="pink">$0.00</strong></div>
@@ -128,7 +128,7 @@ const fmtDate=value=>{if(!value)return '—';let m=String(value).match(/^(\d{4})
 const save=()=>{localStorage.setItem(KEY,JSON.stringify(db));renderAll();if(parent!==window)parent.postMessage({source:'maus-pos',type:'changed'},location.origin)},esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const product=id=>db.products.find(x=>x.id===id),client=id=>db.clients.find(x=>x.id===id);
 function showPage(id){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===id));renderAll();window.scrollTo(0,0)}
-window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;const m=event.data;if(m?.type==='maus-navigate'&&['sales','stock','home'].includes(m.screen))showPage(m.screen);if(m?.type==='maus-report'){showPage('more');setTimeout(()=>{if(m.report==='sales')reportSales();if(m.report==='inventory')reportInventory();if(m.report==='debtors')debtorsReport()},0)}if(m?.type==='maus-pos-reload'){db=loadDB();db.providers=db.providers||[];db.providerDebts=db.providerDebts||[];db.providerPayments=db.providerPayments||[];renderAll()}});if(parent!==window)parent.postMessage({source:'maus-pos',type:'ready'},location.origin);
+window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;const m=event.data;if(m?.type==='maus-navigate'&&['sales','stock','home'].includes(m.screen))showPage(m.screen);if(m?.type==='maus-report'){showPage('more');setTimeout(()=>{if(m.report==='sales')reportSales();if(m.report==='inventory')reportInventory();if(m.report==='debtors')debtorsReport()},0)}if(m?.type==='maus-pos-reload'){db=loadDB();db.providers=db.providers||[];db.providerDebts=db.providerDebts||[];db.providerPayments=db.providerPayments||[];renderAll()}});if(parent!==window){document.body.classList.add('embedded');parent.postMessage({source:'maus-pos',type:'ready'},location.origin)}
 function modal(t,b){document.getElementById('modalTitle').textContent=t;document.getElementById('modalBody').innerHTML=b;document.getElementById('modal').classList.add('show')}function closeModal(){document.getElementById('modal').classList.remove('show')}
 function F(l,id,ph='',type='text',val=''){return `<label>${l}</label><input id="${id}" type="${type}" placeholder="${ph}" value="${esc(val)}">`}
 function openProduct(id=''){let p=product(id)||{};modal(id?'Editar producto':'Nuevo producto',`${F('Nombre del producto','pn','Ej. Producto','text',p.name||'')}<p class="hint">El precio se captura manualmente en cada venta.</p><div class="actions" style="margin-top:14px"><button onclick="saveProduct('${id}')">Guardar</button>${id?`<button class="danger" onclick="deleteProduct('${id}')">Eliminar</button>`:''}</div>`)}
