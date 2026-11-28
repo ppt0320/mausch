@@ -119,7 +119,7 @@ private struct WebAppView: UIViewRepresentable {
                   await new Promise(resolve => setTimeout(resolve, 250));
                 }
                 if (typeof all !== 'function' || !db) throw new Error('El almacenamiento todavía se está cargando.');
-                const file = {app: 'MAU$ch', version: 2, exportedAt: new Date().toISOString(), boxes: await all('boxes'), items: await all('moves')};
+                const file = {app: 'MAU$', version: 2, exportedAt: new Date().toISOString(), boxes: await all('boxes'), items: await all('moves')};
                 window.webkit.messageHandlers.mauschBackup.postMessage(JSON.stringify(file));
               } catch (error) {
                 alert(error.message || 'No se pudo preparar el respaldo.');
@@ -134,7 +134,7 @@ private struct WebAppView: UIViewRepresentable {
                   let json = message.body as? String,
                   let data = json.data(using: .utf8),
                   let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  payload["app"] as? String == "MAU$ch",
+                  payload["app"] as? String == "MAU$",
                   payload["version"] as? Int == 2 else {
                 showBackupError("No se pudo preparar el archivo de respaldo.", in: message.webView)
                 return
