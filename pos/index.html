@@ -118,11 +118,11 @@ nav button.active{background:#302820!important;color:#e3c29a!important}
 <nav><button class="active" data-page="home" onclick="showPage('home')"><span class="ico">⌂</span>Inicio</button><button data-page="sales" onclick="showPage('sales')"><span class="ico">🛒</span>Ventas</button><button data-page="stock" onclick="showPage('stock')"><span class="ico">▦</span>Inventario</button><button data-page="more" onclick="showPage('more')"><span class="ico">•••</span>Más</button></nav>
 <div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet"><div class="sheethead"><h2 id="modalTitle">Registro</h2><button class="secondary small" onclick="closeModal()">Cerrar</button></div><div id="modalBody"></div></div></div>
 <script>
-const KEY='maus-pos-local-v3';
+const KEY='maus-unified-pos-local-v1';
 let db=loadDB();
 db.providers=db.providers||[];db.providerDebts=db.providerDebts||[];db.providerPayments=db.providerPayments||[];
 
-function loadDB(){try{let v=JSON.parse(localStorage.getItem(KEY)||'null');if(v)return v;let old=JSON.parse(localStorage.getItem('maus-pos-local-v1')||'null');return old||{products:[],clients:[],sales:[],production:[],payments:[]}}catch(e){return {products:[],clients:[],sales:[],production:[],payments:[]}}}
+function loadDB(){try{let v=JSON.parse(localStorage.getItem(KEY)||'null');return v||{products:[],clients:[],sales:[],production:[],payments:[]}}catch(e){return {products:[],clients:[],sales:[],production:[],payments:[]}}}
 const money=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(n)||0),today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const fmtDate=value=>{if(!value)return '—';let m=String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1].slice(-2):String(value)};
 const save=()=>{localStorage.setItem(KEY,JSON.stringify(db));renderAll();if(parent!==window)parent.postMessage({source:'maus-pos',type:'changed'},location.origin)},esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
